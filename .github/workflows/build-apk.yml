@@ -42,7 +42,6 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     timeout-minutes: 180
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -58,14 +57,27 @@ jobs:
           fi
           mkdir -p work
           unzip -q "$ZIP" -d work
-          ROOT="$(find work -mindepth 1 -maxdepth 4 -type f -name build.sh -printf '%h\n' | head -n 1)"
+          ROOT="$(find work -mindepth 1 -maxdepth 5 -type f -name build.sh -printf '%h\n' | head -n 1)"
           if [ -z "$ROOT" ]; then
             echo "::error::Could not find build.sh inside the uploaded ZIP."
-            find work -maxdepth 4 -type f | head -100
+            find work -maxdepth 5 -type f | head -100
             exit 1
           fi
           echo "ARTCRAFT_ROOT=$GITHUB_WORKSPACE/$ROOT" >> "$GITHUB_ENV"
           echo "Found builder at: $ROOT"
+
+      - name: Install mobile UI patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          PATCH="$GITHUB_WORKSPACE/vectorcraft-mobile-prepare.sh"
+          if [ ! -f "$PATCH" ]; then
+            echo "::error::vectorcraft-mobile-prepare.sh is missing from the repository root."
+            exit 1
+          fi
+          mkdir -p "$ARTCRAFT_ROOT/adapters/vectorcraft"
+          cp "$PATCH" "$ARTCRAFT_ROOT/adapters/vectorcraft/prepare.sh"
+          chmod +x "$ARTCRAFT_ROOT/adapters/vectorcraft/prepare.sh"
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
